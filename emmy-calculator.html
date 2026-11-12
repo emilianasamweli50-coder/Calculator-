@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html lang="sw">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Emmy Calculator</title>
+<style>
+  :root {
+    --bg: #1f2a44;
+    --panel: #2a3756;
+    --key: #3a4a72;
+    --key-text: #f2f5ff;
+    --op: #f2b134;
+    --op-text: #1f2a44;
+    --clear: #e4577a;
+    --screen: #141c30;
+    --screen-text: #eaf0ff;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--bg);
+    font-family: "Trebuchet MS", "Segoe UI", sans-serif;
+  }
+  .calc {
+    width: min(92vw, 340px);
+    background: var(--panel);
+    padding: 18px;
+    border-radius: 22px;
+    box-shadow: 0 14px 40px rgba(0,0,0,.35);
+  }
+  h1 {
+    margin: 0 0 12px;
+    font-size: 26px;
+    font-weight: 700;
+    letter-spacing: 1px;
+    color: var(--op);
+    text-align: center;
+  }
+  .screen {
+    background: var(--screen);
+    color: var(--screen-text);
+    border-radius: 14px;
+    padding: 12px 14px;
+    text-align: right;
+    margin-bottom: 14px;
+    min-height: 82px;
+    overflow: hidden;
+  }
+  .history { font-size: 14px; opacity: .6; min-height: 20px; word-break: break-all; }
+  .display { font-size: 36px; font-weight: 600; word-break: break-all; }
+  .keys { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; }
+  button {
+    border: 0;
+    border-radius: 12px;
+    padding: 16px 0;
+    font-size: 20px;
+    font-family: inherit;
+    background: var(--key);
+    color: var(--key-text);
+    cursor: pointer;
+  }
+  button:active { transform: scale(.95); }
+  button:focus-visible { outline: 3px solid var(--op); outline-offset: 2px; }
+  .op { background: var(--op); color: var(--op-text); font-weight: 700; }
+  .clear { background: var(--clear); color: #fff; font-weight: 700; }
+  .zero { grid-column: span 2; }
+</style>
+</head>
+<body>
+  <div class="calc">
+    <h1>Emmy</h1>
+    <div class="screen">
+      <div class="history" id="history"></div>
+      <div class="display" id="display">0</div>
+    </div>
+    <div class="keys">
+      <button class="clear" onclick="clearAll()">C</button>
+      <button class="op" onclick="backspace()">⌫</button>
+      <button class="op" onclick="percent()">%</button>
+      <button class="op" onclick="setOp('÷')">÷</button>
+
+      <button onclick="addDigit('7')">7</button>
+      <button onclick="addDigit('8')">8</button>
+      <button onclick="addDigit('9')">9</button>
+      <button class="op" onclick="setOp('×')">×</button>
+
+      <button onclick="addDigit('4')">4</button>
+      <button onclick="addDigit('5')">5</button>
+      <button onclick="addDigit('6')">6</button>
+      <button class="op" onclick="setOp('−')">−</button>
+
+      <button onclick="addDigit('1')">1</button>
+      <button onclick="addDigit('2')">2</button>
+      <button onclick="addDigit('3')">3</button>
+      <button class="op" onclick="setOp('+')">+</button>
+
+      <button class="zero" onclick="addDigit('0')">0</button>
+      <button onclick="addDecimal()">.</button>
+      <button class="op" onclick="calculate()">=</button>
+    </div>
+  </div>
+
+<script>
+  let current = "0";
+  let previous = null;
+  let operator = null;
+  let justCalculated = false;
+
+  const displayEl = document.getElementById("display");
+  const historyEl = document.getElementById("history");
+
+  function update() {
+    displayEl.textContent = current;
+    historyEl.textContent = previous !== null && operator ? previous + " " + operator : "";
+  }
+
+  function addDigit(d) {
+    if (justCalculated) { current = "0"; justCalculated = false; }
+    current = current === "0" ? d : current + d;
+    update();
+  }
+
+  function addDecimal() {
+    if (justCalculated) { current = "0"; justCalculated = false; }
+    if (!current.includes(".")) current += ".";
+    update();
+  }
+
+  function setOp(op) {
+    if (operator && !justCalculated) calculate(true);
+    previous = current;
+    operator = op;
+    current = "0";
+    justCalculated = false;
+    update();
+  }
+
+  function calculate(keepOp) {
+    if (operator === null || previous === null) return;
+    const a = parseFloat(previous);
+    const b = parseFloat(current);
+    let result;
+    switch (operator) {
+      case "+": result = a + b; break;
+      case "−": result = a - b; break;
+      case "×": result = a * b; break;
+      case "÷":
+        if (b === 0) {
+          current = "Haiwezekani";
+          previous = null; operator = null; justCalculated = true;
+          update();
+          return;
+        }
+        result = a / b; break;
+    }
+    result = Math.round(result * 1e10) / 1e10;
+    current = String(result);
+    if (keepOp !== true) {
+      previous = null;
+      operator = null;
+      justCalculated = true;
+    }
+    update();
+  }
+
+  function clearAll() {
+    current = "0"; previous = null; operator = null; justCalculated = false;
+    update();
+  }
+
+  function backspace() {
+    if (justCalculated) return;
+    current = current.length > 1 ? current.slice(0, -1) : "0";
+    update();
+  }
+
+  function percent() {
+    current = String(parseFloat(current) / 100);
+    update();
+  }
+
+  document.addEventListener("keydown", function (e) {
+    if (e.key >= "0" && e.key <= "9") addDigit(e.key);
+    else if (e.key === ".") addDecimal();
+    else if (e.key === "+") setOp("+");
+    else if (e.key === "-") setOp("−");
+    else if (e.key === "*") setOp("×");
+    else if (e.key === "/") { e.preventDefault(); setOp("÷"); }
+    else if (e.key === "Enter" || e.key === "=") calculate();
+    else if (e.key === "Backspace") backspace();
+    else if (e.key === "Escape") clearAll();
+  });
+</script>
+</body>
+</html>
